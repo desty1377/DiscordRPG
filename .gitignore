@@ -130,3 +130,4 @@ dmypy.json
 
 token.txt
 players.txt
+.gitignore
