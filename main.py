@@ -412,7 +412,7 @@ def addplayer(pid):
     players.hp.append(1)
     players.inventory.append("000") # empty inventory
     players.state.append(0) # tutorial state
-    players.weapon.append(-1)
+    players.weapon.append(0)
     players.ship.append(0) # no weapon or ship
     writeplayer()
     return
