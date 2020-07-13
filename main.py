@@ -1,5 +1,5 @@
 import discord
-from DiscordRPG.idtoname import *
+from idtoname import *
 import random
 import math
 
