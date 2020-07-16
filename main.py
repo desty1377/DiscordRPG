@@ -40,7 +40,7 @@ async def on_message(msg): # executes every message the bot can see
             if msg.content == "*start": # it's a specific command, so it has separate check
                 if checkplayer(msg.author.id) == -1:
                     if msg.channel.name == "getting-started":
-                        await msg.channel.send(f"{msg.author.display_name} has begun their adventure! You’ve been given 2,750 credits, let’s get your first ship. (*buy starflier)")
+                        await msg.channel.send(f"**{msg.author.display_name}** has begun their adventure! You’ve been given 2,750 credits, let’s get your first ship. (*buy starflier)")
                         addplayer(msg.author.id)
                     else:
                         await msg.channel.send("Please start in #getting-started.")
@@ -53,40 +53,98 @@ async def on_message(msg): # executes every message the bot can see
                     player = checkplayer(msg.author.id)
                     command, vals = getvals(msg.content[1:])
                     if command == "buy":
-                        if vals[0] == "starflier":
-                            if players.ship[player] >= 1:
-                                await msg.channel.send("You already purchased this ship.")
-                            elif msg.channel.name != "getting-started":
-                                await msg.channel.send("Please use this command in #getting-started.")
-                            else:
-                                players.ship[player] = 1
-                                players.credits[player] -= 1000
-                                players.hp[player] = 1000
-                                await msg.channel.send(f"{msg.author.display_name} has purchased their first ship! Let’s outfit your hunk of junk with a weapon. (*buy blaster)")
-                        elif vals[0] == "blaster":
-                            if players.weapon[player] == 1:
-                                await msg.channel.send("You already purchased the blaster.")
-                            elif players.ship[player] < 1:
-                                await msg.channel.send("You do not have a ship to mount your weapon on.")
-                            elif msg.channel.name != "getting-started":
-                                await msg.channel.send("Please use this command in #getting-started.")
-                            else:
-                                players.weapon[player] = 0
-                                players.credits[player] -= 500
-                                await msg.channel.send(f"{msg.author.display_name} has mounted their first weapon on their ship! Before takeoff, we’ll buy some hull repair kits. (*buy repairbox)")
-                        elif vals[0] == "repairbox":
-                            if players.state[player] >= 1:
-                                await msg.channel.send("You cannot purchase this kit after tutorial.")
-                            elif players.inventory[player] != "000":
-                                await msg.channel.send("You already purchased this kit.")
-                            elif msg.channel.name != "getting-started":
-                                await msg.channel.send("Please use this command in #getting-started.")
-                            else:
-                                players.inventory[player] = '3' + players.inventory[player][1:]
-                                players.credits[player] -= 750
-                                await msg.channel.send(f"{msg.author.display_name} is now ready for their first flight! Let’s double check our systems before we launch. (*inventory)")
+                        if players.state[player] == 0:
+                            if vals[0] == "starflier":
+                                if players.ship[player] >= 1:
+                                    await msg.channel.send("You already purchased this ship.")
+                                elif msg.channel.name != "getting-started":
+                                    await msg.channel.send("Please use this command in #getting-started.")
+                                else:
+                                    players.ship[player] = 1
+                                    players.credits[player] -= 1000
+                                    players.hp[player] = 1000
+                                    await msg.channel.send(f"**{msg.author.display_name}** has purchased their first ship! Let’s outfit your hunk of junk with a weapon. (*buy blaster)")
+                                    updatefile()
+                            elif vals[0] == "blaster":
+                                if players.weapon[player] == 1:
+                                    await msg.channel.send("You already purchased the blaster.")
+                                elif players.ship[player] < 1:
+                                    await msg.channel.send("You do not have a ship to mount your weapon on.")
+                                elif msg.channel.name != "getting-started":
+                                    await msg.channel.send("Please use this command in #getting-started.")
+                                else:
+                                    players.weapon[player] = 0
+                                    players.credits[player] -= 500
+                                    await msg.channel.send(f"**{msg.author.display_name}** has mounted their first weapon on their ship! Before takeoff, we’ll buy some hull repair kits. (*buy repairbox)")
+                                    updatefile()
+                            elif vals[0] == "repairbox":
+                                if players.state[player] != 0:
+                                    await msg.channel.send("You cannot purchase this kit after tutorial.")
+                                elif players.inventory[player] != "000":
+                                    await msg.channel.send("You already purchased this kit.")
+                                elif msg.channel.name != "getting-started":
+                                    await msg.channel.send("Please use this command in #getting-started.")
+                                else:
+                                    players.inventory[player] = "300"
+                                    players.credits[player] -= 750
+                                    await msg.channel.send(f"**{msg.author.display_name}** is now ready for their first flight! Let’s double check our systems before we launch. (*inventory)")
+                                    updatefile()
+                        elif int(players.state[player]) != 4:
+                            await msg.channel.send("This command can only be used when in shop.")
+                        elif msg.channel.name != "docked":
+                            await msg.channel.send("Please use this command in the #docked channel.")
+                        else:
+                            if players.state[player] == 4.1:
+                                upgrade = players.ship[player] + 1
+                                if players.credits[player] < int(getshipcost(upgrade)):
+                                    await msg.channel.send("You cannot afford to upgrade your ship.")
+                                else:
+                                    players.credits[player] -= int(getshipcost(upgrade))
+                                    players.ship[player] += 1
+                                    await msg.channel.send("Tobias: \"Big purchase! You won't regret it. Thank you.\"")
+                                    updatefile()
+                            elif players.state[player] == 4.4:
+                                if players.credits[player] < 100000:
+                                    await msg.channel.send("You cannot afford to get the Hybrid.")
+                                else:
+                                    players.credits[player] -= 100000
+                                    await msg.channel.send("Tobias: \"You have funded our research for many, many more years. Our engineers and I thank you. Take care of it.\"")
+                                    updatefile()
+                            elif int(players.state[player] * 10) == 43 and players.state[player] * 10 != 43.0:
+                                if str(players.state[player])[3] == '1':
+                                    if players.credits[player] < 250 or players.inventory[player][0] == "5":
+                                        await msg.channel.send("You can't get this bot.")
+                                    else:
+                                        players.credits[player] -= 250
+                                        players.inventory[player] = str(int(players.inventory[player]) + 100)
+                                        await msg.channel.send("You have purchased **Quick Hull Weld**.")
+                                        updatefile()
+                                if str(players.state[player])[3] == '2':
+                                    if players.credits[player] < 300 or players.inventory[player][1] == "3":
+                                        await msg.channel.send("You can't get this bot.")
+                                    else:
+                                        players.credits[player] -= 300
+                                        players.inventory[player] = str(int(players.inventory[player]) + 10)
+                                        await msg.channel.send("You have purchased **Medium Repair Bot**.")
+                                        updatefile()
+                                if str(players.state[player])[3] == '3':
+                                    if players.credits[player] < 450 or players.inventory[player][0] == "1":
+                                        await msg.channel.send("You can't get this bot.")
+                                    else:
+                                        players.credits[player] -= 450
+                                        players.inventory[player] = str(int(players.inventory[player]) + 1)
+                                        await msg.channel.send("You have purchased **Nanobot Repair Unit**.")
+                                        updatefile()
+                            elif int(players.state[player] * 10) == 42 and players.state[player] * 10 != 42.0:
+                                if int(getweaponcost(int(str(players.state[player])[3]))) > players.credits[player]:
+                                    await msg.channel.send(f"You cannot afford **{getweapon(int(str(players.state[player])[3]))}**.")
+                                else:
+                                    players.credits[player] -= int(getweaponcost(int(str(players.state[player])[3])))
+                                    players.weapon[player] = int(str(players.state[player])[3])
+                                    await msg.channel.send(f"Tobias: \"Thank you. My robots will replace your weapon momentarily.\"")
+                                    updatefile()
                     elif command == "inventory":
-                        if players.state[player] >= 1:
+                        if players.state[player] != 0:
                             await msg.channel.send("You can only use this command during the tutorial.")
                         elif msg.channel.name != "getting-started":
                             await msg.channel.send("Please use this command in #getting-started.")
@@ -115,7 +173,7 @@ Inventory:
                         else:
                             players.state[player] = 1
                             updatefile()
-                            await msg.channel.send(f"{msg.author.display_name} has their first flight! Welcome to (system one). Use (*help) from your ship’s dashboard to see what you can do!")
+                            await msg.channel.send(f"**{msg.author.display_name}** has their first flight! Welcome to **System One**. Use (*help) from your ship’s dashboard to see what you can do!")
                     elif command == "help":
                         if players.state[player] == 1:
                             if msg.channel.name != "in-space":
@@ -169,7 +227,7 @@ Inventory:
                                 responses = [f"You catch a Light Pirate Ship in an asteroid field!\nPirate: \"Seems to be my lucky day. You're going down!\"", "A Medium Pirate Ship ambushes you!\nPirate: \"Bad move to be travelling alone. Say goodbye!\"", "You think it's a shipwreck, but it's a Heavy Pirate Ship!\nPirate: \"This'll be fun! You've got nowhere to run.\"", "A Pirate Dreadnaught moves out from a nearby nebula!\nPirate: \"You're outclassed and outgunned. Time to die!\""]
                                 if ship < 4:
                                     await msg.channel.send(responses[ship])
-                                    await msg.channel.send(f"Looks like their ship has a {getenemyweapon(weapon)}.")
+                                    await msg.channel.send(f"Looks like their ship has a **{getenemyweapon(weapon)}**.")
                                 else:
                                     await msg.channel.send("An unrecognizable object de-cloaks infront of you!\nLooks to be armed and incredibly dangerous.\n*A mix of static and hissing emit from your comms*")
                                 await msg.channel.send("""What do you do?
@@ -208,10 +266,10 @@ Inventory:
                                     dmg = pirateshot(player)
                                     players.hp[player] -= dmg
                                     if dmg != 0:
-                                        await msg.channel.send(f"{getenemyship(fights.enemyship[fights.id.index(player)])} comes around for an attack and deals **{dmg}** dmg to you!")
+                                        await msg.channel.send(f"**{getenemyship(fights.enemyship[fights.id.index(player)])}** comes around for an attack and deals **{dmg}** dmg to you!")
                                         updatefile()
                                     else:
-                                        await msg.channel.send(f"{getenemyship(fights.enemyship[fights.id.index(player)])}'s weapons bounce off your shield, leaving you unharmed this turn!")
+                                        await msg.channel.send(f"**{getenemyship(fights.enemyship[fights.id.index(player)])}**'s weapons bounce off your shield, leaving you unharmed this turn!")
                                     if players.hp[player] <= 0:
                                         players.state[player] = -1
                                         players.inventory[player] = "000"
@@ -220,7 +278,7 @@ Inventory:
                                         updatefile()
                     elif command == "attack":
                         if players.state[player] != 2:
-                            await msg.channel.send("You can only use repair systems when in a fight.")
+                            await msg.channel.send("You can only attack when in a fight.")
                         elif msg.channel.name != "in-space":
                             await msg.channel.send("Please use this command in the #in-space channel.")
                         else:
@@ -235,33 +293,34 @@ Inventory:
                                     reward = random.randint(cred[fights.enemyship[index]][0], cred[fights.enemyship[index]][1])
                                     await msg.channel.send(f"**{msg.author.display_name}** has destroyed the **{getenemyship(fights.enemyship[index])}**!")
                                     await msg.channel.send(f"Gained **{reward}** credits.")
+                                    players.credits[player] += reward
                                     if fights.enemyship[index] == 1:
                                         if players.inventory[player][0] != "5":
-                                            players.inventory[player] = str(int(players.inventory[player][0]) + 1) + players.inventory[player][1:]
+                                            players.inventory[player] = str(int(players.inventory[player]) + 100)
                                             await msg.channel.send("Gained 1 Quick Hull Weld.")
                                         else:
                                             await msg.channel.send("You found a Quick Hull Weld but could not take it with you because of full inventory.")
                                     elif fights.enemyship[index] == 2:
                                         if players.inventory[player][0] != "5":
-                                            players.inventory[player] = str(int(players.inventory[player][0]) + 1) + players.inventory[player][1:]
+                                            players.inventory[player] = str(int(players.inventory[player]) + 100)
                                             await msg.channel.send("Gained 1 Quick Hull Weld.")
                                         else:
                                             await msg.channel.send("You found a Quick Hull Weld but could not take it with you because of full inventory.")
                                         if random.randint(1, 4) == 1:
                                             if players.inventory[player][1] != "3":
-                                                players.inventory[player] = players.inventory[player][0] + str(int(players.inventory[player][1]) + 1) + players.inventory[player][2]
+                                                players.inventory[player] = str(int(players.inventory[player]) + 10)
                                                 await msg.channel.send("Gained 1 Medium Repair Bot.")
                                             else:
                                                 await msg.channel.send("You found a Medium Repair Bot but could not take it with you because of full inventory.")
                                     elif fights.enemyship[index] == 3:
                                         if players.inventory[player][1] != "3":
-                                            players.inventory[player] = str(int(players.inventory[player][0]) + 1) + players.inventory[player][1:]
+                                            players.inventory[player] = str(int(players.inventory[player]) + 10)
                                             await msg.channel.send("Gained 1 Medium Repair Bot.")
                                         else:
                                             await msg.channel.send("You found a Medium Repair Bot but could not take it with you because of full inventory.")
                                         if random.randint(1, 4) == 1:
                                             if players.inventory[player][2] != "1":
-                                                players.inventory[player] = players.inventory[player][0] + str(int(players.inventory[player][1]) + 1) + players.inventory[player][2]
+                                                players.inventory[player] = str(int(players.inventory[player]) + 1)
                                                 await msg.channel.send("Gained 1 Nanobot Repair Unit.")
                                             else:
                                                 await msg.channel.send("You found a Nanobot Repair Unit but could not take it with you because of full inventory.")
@@ -328,7 +387,7 @@ Damage: **?5?-?5?**""")
                                 updatefile()
                             else:
                                 await msg.channel.send(
-                                    f"{getenemyship(fights.enemyship[fights.id.index(player)])}'s weapons bounce off your shield, leaving you unharmed this turn!")
+                                    f"**{getenemyship(fights.enemyship[fights.id.index(player)])}**'s weapons bounce off your shield, leaving you unharmed this turn!")
                     elif command == "dock":
                         if players.state[player] != 1:
                             await msg.channel.send("This command can only be used in space.")
@@ -336,19 +395,19 @@ Damage: **?5?-?5?**""")
                             await msg.channel.send("Please use this command in the #in-space channel.")
                         else:
                             players.state[player] = 3
-                            await msg.channel.send(f"{msg.author.display_name} has returned to their base. They eat some food, maybe sleep a little.")
+                            await msg.channel.send(f"**{msg.author.display_name}** has returned to their base. They eat some food, maybe sleep a little.")
                             updatefile()
                     elif command == "launch":
-                        if players.state[player] != 3 and players.state[player] != 4:
+                        if players.state[player] != 3:
                             await msg.channel.send("This command can only be used when docked.")
                         elif msg.channel.name != "docked":
                             await msg.channel.send("Please use this command in the #docked channel.")
                         else:
                             players.state[player] = 1
-                            await msg.channel.send(f"{msg.author.display_name} has launched into space!")
+                            await msg.channel.send(f"**{msg.author.display_name}** has launched into space!")
                             updatefile()
                     elif command == "repair":
-                        if players.state[player] != 3 and players.state[player] != 4:
+                        if players.state[player] != 3:
                             await msg.channel.send("This command can only be used when docked.")
                         elif msg.channel.name != "docked":
                             await msg.channel.send("Please use this command in the #docked channel.")
@@ -365,14 +424,15 @@ Damage: **?5?-?5?**""")
                                 players.hp[player] = int(getmaxhp(players.ship[player]))
                             updatefile()
                     elif command == "shop":
-                        if players.state[player] != 3 and players.state[player] != 4:
+                        if players.state[player] != 3 and int(players.state[player]) != 4:
                             await msg.channel.send("This command can only be used when docked.")
                         elif msg.channel.name != "docked":
                             await msg.channel.send("Please use this command in the #docked channel.")
-                        elif players.state[player] == 3:
-                            await msg.channel.send("You already are in the shop. Try *upgrades, *weapons and *special to see items for purchase.")
+                        elif players.state[player] == 4:
+                            await msg.channel.send("You already are in the shop. Try *upgrades, *weapons, *bots and *special to see items for purchase and *leave to return to base.")
                         else:
-                            await msg.channel.send("You've now entered Tobias' shop. You can ask him about ship *upgrades, new *weapons and *special items.")
+                            await msg.channel.send("You've now entered Tobias' shop. You can ask him about ship *upgrades, new *weapons, *bots and *special items.")
+                            players.state[player] = 4
                     elif command == "respawn":
                         if players.state[player] != -1:
                             await msg.channel.send("You are not dead.")
@@ -381,6 +441,128 @@ Damage: **?5?-?5?**""")
                             players.hp[player] = int(getmaxhp(players.ship[player]))
                             await msg.channel.send("You returned to your base.")
                             updatefile()
+                    elif command == "upgrades":
+                        if int(players.state[player]) != 4:
+                            await msg.channel.send("This command can only be used when in shop.")
+                        elif msg.channel.name != "docked":
+                            await msg.channel.send("Please use this command in the #docked channel.")
+                        elif players.state[player] % 1 != 0 and players.state[player] != 4.1:
+                            await msg.channel.send("You are in a different shop branch.")
+                        elif players.ship[player] == 4:
+                            await msg.channel.send("You already have the best ship available.")
+                        else:
+                            players.state[player] = 4.1
+                            upgrade = players.ship[player] + 1
+                            await msg.channel.send(f"""Next available ship is **{getship(upgrade)}**:
+HP: **{getmaxhp(upgrade)}**
+Cost: **{getshipcost(upgrade)}**
+Use *buy to get it or *back to view weapons and bots""")
+                    elif command == "weapons":
+                        if int(players.state[player]) != 4:
+                            await msg.channel.send("This command can only be used when in shop.")
+                        elif msg.channel.name != "docked":
+                            await msg.channel.send("Please use this command in the #docked channel.")
+                        elif players.state[player] % 1 != 0 and players.state[player] != 4.2:
+                            await msg.channel.send("You are in a different shop branch.")
+                        else:
+                            players.state[player] = 4.2
+                            await msg.channel.send(f"""Here's Tobias' weapon collection:
+1 **Blaster**
+2 **Type I Repeater**
+3 **Type II Repeater**
+4 **Chaingun**
+5 **Torpedo Launcher Mark I**
+6 **Prototype Torpedo Launcher Mark II**
+Use *(number) to learn more or *back to view upgrades and bots.""")
+                    elif command == "bots":
+                        if int(players.state[player]) != 4:
+                            await msg.channel.send("This command can only be used when in shop.")
+                        elif msg.channel.name != "docked":
+                            await msg.channel.send("Please use this command in the #docked channel.")
+                        elif players.state[player] % 1 != 0 and players.state[player] != 4.3:
+                            await msg.channel.send("You are in a different shop branch.")
+                        else:
+                            players.state[player] = 4.3
+                            await msg.channel.send("""Here are bots for purchase:
+1 **Quick Hull Weld**
+2 **Medium Repair Bot**
+3 **Nanobot Repair Unit**
+Use *(number) to learn more or *back to view upgrades and weapons.""")
+                    elif command == "special":
+                        if int(players.state[player]) != 4:
+                            await msg.channel.send("This command can only be used when in shop.")
+                        elif msg.channel.name != "docked":
+                            await msg.channel.send("Please use this command in the #docked channel.")
+                        elif players.state[player] % 1 != 0 and players.state[player] != 4.4:
+                            await msg.channel.send("You are in a different shop branch.")
+                        elif players.ship[player] == 5:
+                            await msg.channel.send("You already own the Aescor Hybrid")
+                        else:
+                            players.state[player] = 4.4
+                            await msg.channel.send("""Tobias: \"Only until a few years ago, the mechanics here managed to take out a single Aescor Siren and bring it back to base.
+After a few months, we finally understood how their technology worked and made some improvements using our own tech.
+This here is the only one in existence, and they are willing to sell it to you, for a decent chunk of change.\"""")
+                            await msg.channel.send("""Ship: **Aescor Hybrid**
+HP: **5000**
+Price: **1000000**""")
+                    elif command in ['1', '2', '3', '4', '5', '6']:
+                        if int(players.state[player]) != 4:
+                            await msg.channel.send("This command can only be used when in shop.")
+                        elif msg.channel.name != "docked":
+                            await msg.channel.send("Please use this command in the #docked channel.")
+                        elif players.state[player] * 10 % 1 != 0:
+                            await msg.channel.send("You are in a different shop branch")
+                        elif players.state[player] == 4.3 and command in ['1', '2', '3']:
+                            players.state[player] = 4.3 + int(command) / 100
+                            if command == '1':
+                                await msg.channel.send(f"Quick Hull Weld - Heals 15% of ship's HP, costs 250 credits each. You currently have **{players.inventory[player][0]}**/5.")
+                            elif command == '2':
+                                await msg.channel.send(f"Medium Repair Bot - Heals 25% of ship's HP, costs 300 credits each. You currently have **{players.inventory[player][1]}**/3.")
+                            else:
+                                await msg.channel.send(f"Nanobot Repair Unit - Heals 80% of ship's HP, costs 450 credits each. You currently have **{players.inventory[player][2]}**/1.")
+                            await msg.channel.send("Use *buy to buy the bot or *back to view the other two.")
+                        else:
+                            if players.weapon[player] == int(command):
+                                await msg.channel.send("This is your current weapon.")
+                            else:
+                                players.state[player] = 4.2 + int(command) / 100
+                                await msg.channel.send(f"**{getweapon(int(command))}** - Does **{getdamage(int(command))}** damage with **{getacc(int(command))}** accuracy. Costs **{getweaponcost(int(command))}** credits.\nUse *buy to get it or *back to view other options.")
+                    elif command == "back":
+                        if int(players.state[player]) != 4:
+                            await msg.channel.send("This command can only be used when in shop.")
+                        elif msg.channel.name != "docked":
+                            await msg.channel.send("Please use this command in the #docked channel.")
+                        elif players.state[player] == 4:
+                            await msg.channel.send("You don't have anywhere to go back. Use *leave instead.")
+                        else:
+                            if players.state[player] * 10 % 1 == 0:
+                                players.state[player] = 4
+                                await msg.channel.send("You can ask Tobias about ship *upgrades, new *weapons, *bots and *special items.")
+                            elif str(players.state[player])[2] == '2':
+                                players.state[player] = 4.2
+                                await msg.channel.send(f"""Here's Tobias' weapon collection:
+1 **Blaster**
+2 **Type I Repeater**
+3 **Type II Repeater**
+4 **Chaingun**
+5 **Torpedo Launcher Mark I**
+6 **Prototype Torpedo Launcher Mark II**
+Use *(number) to learn more or *back to view upgrades and bots.""")
+                            elif str(players.state[player])[2] == '3':
+                                players.state[player] = 4.3
+                                await msg.channel.send("""Here are bots for purchase:
+1 **Quick Hull Weld**
+2 **Medium Repair Bot**
+3 **Nanobot Repair Unit**
+Use *(number) to learn more or *back to view upgrades and weapons.""")
+                    elif command == "leave":
+                        if int(players.state[player]) != 4:
+                            await msg.channel.send("This command can only be used when in shop.")
+                        elif msg.channel.name != "docked":
+                            await msg.channel.send("Please use this command in the #docked channel.")
+                        else:
+                            players.state[player] = 3
+                            await msg.channel.send("You returned to your base.")
     return
 
 
@@ -418,7 +600,7 @@ def addplayer(pid):
     return
 
 
-def writeplayer(): # adds player to the list. On the list the player already has the starting items, ensuring they can play if the bot crashed mid-start
+def writeplayer(): # adds player to the list.
     f = open("players.txt", "a") # (a stands for append)
     f.write(str(players.id[-1]) + " 0 2750 0 1 -1 000")
     f.close()
@@ -548,6 +730,28 @@ def getmaxhp(sid):
     }[sid]
 
 
+def getshipcost(sid):
+    return {
+        1: "1000",
+        2: "10000",
+        3: "15000",
+        4: "25000",
+        5: "100000",
+    }[sid]
+
+
+def getweaponcost(wip):
+    return {
+        0: "0",
+        1: "500",
+        2: "10000",
+        3: "13000",
+        4: "30000",
+        5: "50000",
+        6: "150000",
+    }[wip]
+
+
 def getdamage(wip):
     return {
         0: "0",
@@ -641,7 +845,6 @@ def getenemymaxhp(sid):
         3: "2500",
         4: "3500",
     }[sid]
-
 
 
 if __name__ == "__main__":
