@@ -97,15 +97,16 @@ async def on_message(msg): # executes every message the bot can see
                             if players.state[player] == 4.1:
                                 upgrade = players.ship[player] + 1
                                 if players.credits[player] < int(getshipcost(upgrade)):
-                                    await msg.channel.send("You cannot afford to upgrade your ship.")
+                                    await msg.channel.send("You don't have enough credits to purchase this item.")
                                 else:
                                     players.credits[player] -= int(getshipcost(upgrade))
                                     players.ship[player] += 1
+                                    players.hp[player] = int(getmaxhp(player.ship[player]))
                                     await msg.channel.send("Tobias: \"Big purchase! You won't regret it. Thank you.\"")
                                     updatefile()
                             elif players.state[player] == 4.4:
                                 if players.credits[player] < 100000:
-                                    await msg.channel.send("You cannot afford to get the Hybrid.")
+                                    await msg.channel.send("You don't have enough credits to purchase this item.")
                                 else:
                                     players.credits[player] -= 100000
                                     await msg.channel.send("Tobias: \"You have funded our research for many, many more years. Our engineers and I thank you. Take care of it.\"")
@@ -128,7 +129,7 @@ async def on_message(msg): # executes every message the bot can see
                                         await msg.channel.send("You have purchased **Medium Repair Bot**.")
                                         updatefile()
                                 if str(players.state[player])[3] == '3':
-                                    if players.credits[player] < 450 or players.inventory[player][0] == "1":
+                                    if players.credits[player] < 450 or players.inventory[player][2] == "1":
                                         await msg.channel.send("You can't get this bot.")
                                     else:
                                         players.credits[player] -= 450
@@ -137,7 +138,7 @@ async def on_message(msg): # executes every message the bot can see
                                         updatefile()
                             elif int(players.state[player] * 10) == 42 and players.state[player] * 10 != 42.0:
                                 if int(getweaponcost(int(str(players.state[player])[3]))) > players.credits[player]:
-                                    await msg.channel.send(f"You cannot afford **{getweapon(int(str(players.state[player])[3]))}**.")
+                                    await msg.channel.send(f"You don't have enough credits to purchase this item.")
                                 else:
                                     players.credits[player] -= int(getweaponcost(int(str(players.state[player])[3])))
                                     players.weapon[player] = int(str(players.state[player])[3])
@@ -173,7 +174,7 @@ Inventory:
                         else:
                             players.state[player] = 1
                             updatefile()
-                            await msg.channel.send(f"**{msg.author.display_name}** has their first flight! Welcome to **System One**. Use (*help) from your ship’s dashboard to see what you can do!")
+                            await msg.channel.send(f"**{msg.author.display_name}** has their first flight! Welcome to **Kusari Star System**. Use (*help) from your ship’s dashboard to see what you can do!")
                     elif command == "help":
                         if players.state[player] == 1:
                             if msg.channel.name != "in-space":
@@ -184,18 +185,18 @@ Inventory:
 *check - displays current status
 *dock - returns you to base, where you can *shop and *repair""")
                         elif players.state[player] == 3:
-                            if msg.channel.name != "in-base":
-                                await msg.channel.send("You are docked, please go to #in-base to use docked commands.")
+                            if msg.channel.name != "docked":
+                                await msg.channel.send("You are docked, please go to #docked to use docked commands.")
                             else:
                                 await msg.channel.send("""When docked, you can:
 *repair - repair your ship at a rate of 5 credits for 10 hp
 *shop - enters Tobias' shop
 *launch - go to space, where you can *explore the system""")
                     elif command == "check":
-                        if players.state[player] != 1 and players.state[player] != 2:
-                            await msg.channel.send("This command can only be used in space.")
-                        elif msg.channel.name != "in-space":
-                            await msg.channel.send("Please use this command in the #in-space channel")
+                        if players.state[player] in [3, 4] and msg.channel.name != "docked":
+                            await msg.channel.send("You are docked, please use #docked.")
+                        elif players.state[player] in [1, 2] and msg.channel.name != "in-space":
+                            await msg.channel.send("You are in space, please use #in-space.")
                         else:
                             await msg.channel.send(f"""Credits: **{players.credits[player]}**
 Ship: **{getship(players.ship[player])}**
@@ -256,7 +257,7 @@ Inventory:
                                 else:
                                     itemuse(int(vals[0]) - 1, player)
                                     j = [0.15, 0.25, 0.8]
-                                    responses = ["The bots get together and repair part of your ship!", "The bots get together and repair part of your ship!", "Nanobots swarm around your ship, covering up holes in your ships hull, greatly repairing your ship."]
+                                    responses = ["The bots get together and repair part of your ship!", "The bots get together and repair part of your ship!", "Nanobots swarm around your ship, covering up holes in your ship's hull, greatly repairing your ship."]
                                     players.hp[player] += round(float(getmaxhp(players.ship[player])) * j[int(vals[0]) - 1])
                                     if players.hp[player] > int(getmaxhp(players.ship[player])):
                                         players.hp[player] = int(getmaxhp(players.ship[player]))
@@ -395,7 +396,7 @@ Damage: **?5?-?5?**""")
                             await msg.channel.send("Please use this command in the #in-space channel.")
                         else:
                             players.state[player] = 3
-                            await msg.channel.send(f"**{msg.author.display_name}** has returned to their base. They eat some food, maybe sleep a little.")
+                            await msg.channel.send(f"**{msg.author.display_name}** has returned to their base. They eat some food, maybe sleep a little.\n\\*launch, \\*repair, \\*shop and \\*check is available in #docked")
                             updatefile()
                     elif command == "launch":
                         if players.state[player] != 3:
@@ -404,7 +405,7 @@ Damage: **?5?-?5?**""")
                             await msg.channel.send("Please use this command in the #docked channel.")
                         else:
                             players.state[player] = 1
-                            await msg.channel.send(f"**{msg.author.display_name}** has launched into space!")
+                            await msg.channel.send(f"**{msg.author.display_name}** has launched into space!\n\\*explore, \\*check and \\*dock are available in #in-space")
                             updatefile()
                     elif command == "repair":
                         if players.state[player] != 3:
@@ -417,7 +418,7 @@ Damage: **?5?-?5?**""")
                             if math.ceil((float(getmaxhp(players.ship[player])) - players.hp[player]) / 10.0) * 5 > players.credits[player]:
                                 players.hp[player] += math.floor(players.credits[player] / 5) * 10
                                 players.credits[player] %= 5
-                                await msg.channel.send(f"You could not afford to repair your ship completely, but you brought it back to **{players.hp[player]}**/{getmaxhp(players.ship[player])} hp.")
+                                await msg.channel.send(f"You do not have enough credits to repair your ship completely, but you brought it back to **{players.hp[player]}**/{getmaxhp(players.ship[player])} hp.")
                             else:
                                 players.credits[player] -= math.ceil((float(getmaxhp(players.ship[player])) - players.hp[player]) / 10.0) * 5
                                 await msg.channel.send(f"Your ship's hull integrity has now been restored to maximum! You now have **{players.credits[player]}** credits.")
@@ -647,7 +648,7 @@ def itemuse(item, player):
     elif item == 1:
         players.inventory[player] = players.inventory[player][0] + str(int(players.inventory[player][1]) - 1) + players.inventory[player][2]
     else:
-        players.inventory[player] = players.inventory[player][:2]
+        players.inventory[player] = players.inventory[player][:2] + '0'
 
 
 def makeenemy():
