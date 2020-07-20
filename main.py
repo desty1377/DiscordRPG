@@ -75,7 +75,7 @@ async def on_message(msg): # executes every message the bot can see
                                     elif msg.channel.name != "getting-started":
                                         await msg.channel.send(".\nPlease use this command in #getting-started.")
                                     else:
-                                        players.weapon[player] = 0
+                                        players.weapon[player] = 1
                                         players.credits[player] -= 500
                                         await msg.channel.send(f".\n**{msg.author.display_name}** has mounted their first weapon on their ship! Before takeoff, we’ll buy some hull repair kits. (*buy repairbox)")
                                         updatefile()
