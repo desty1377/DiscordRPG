@@ -49,7 +49,7 @@ async def on_message(msg): # executes every message the bot can see
                         await msg.channel.send(".\nYou have already started playing.")
             else:
                 if checkplayer(msg.author.id) == -1:
-                        await msg.channel.send(".\nYou haven't started yet. Please start in #getting-started using *start.")
+                    await msg.channel.send(".\nYou haven't started yet. Please start in #getting-started using *start.")
                 else:
                     player = checkplayer(msg.author.id)
                     command, vals = getvals(msg.content[1:])
