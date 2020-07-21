@@ -40,7 +40,7 @@ async def on_ready(): # executes every time bot starts up
 async def on_message(msg): # executes every message the bot can see
     global counter
     if msg.content and msg.author.id != client.user.id:
-        if msg.content[0] == '*': # constant prefix
+        if msg.content[0] == '*' and discord.utils.find(lambda m: m.name == "RPG player", msg.author.roles) is not None: # constant prefix
             if msg.content == "*start": # it's a specific command, so it has separate check
                 async with msg.channel.typing():
                     if checkplayer(msg.author.id) == -1:
