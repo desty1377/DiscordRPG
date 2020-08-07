@@ -1,10 +1,10 @@
 import discord
 import random
 import math
+import threading
+import time
 
-token = open("token.txt", "r").read()
-
-client = discord.Client()
+boot = True
 
 # info about each player, id is the user's discord ID. This also means the bot remembers you between servers
 class players:
@@ -23,7 +23,39 @@ class fights:
     enemyhp = []
 
 
-counter = 1
+# noinspection PyBroadException
+def every(delay, task):
+    next_time = time.time() + delay
+    while True:
+        time.sleep(max(0, next_time - time.time()))
+        try:
+            task()
+        except Exception:
+            pass
+        next_time += (time.time() - next_time) // delay * delay + delay
+
+
+def updatefile():
+    global boot
+    if boot:
+        boot = False
+    else:
+        print(f"{time.asctime()}: Updating file...")
+        i = 0
+        s = ""
+        while i < len(players.id):
+            s += str(players.id[i]) + ' ' + str(players.state[i]) + ' ' + str(players.credits[i]) + ' ' + str(players.ship[i]) + ' ' + str(players.hp[i]) + ' ' + str(players.weapon[i]) + ' ' + players.inventory[i] + '\n'
+            i += 1
+        f = open("players.txt", "w")
+        f.write(s)
+        f.close()
+    return
+
+
+threading.Thread(target=lambda: every(3600, updatefile())).start()
+
+token = open("token.txt", "r").read()
+client = discord.Client()
 
 
 @client.event
@@ -38,7 +70,6 @@ async def on_ready(): # executes every time bot starts up
 
 @client.event
 async def on_message(msg): # executes every message the bot can see
-    global counter
     if msg.author.id == client.user.id:
         if msg.content[0] != ',':
             await msg.delete()
@@ -72,7 +103,6 @@ async def on_message(msg): # executes every message the bot can see
                                     players.credits[player] -= 1000
                                     players.hp[player] = 1000
                                     await msg.channel.send(f",\n**{msg.author.display_name}** has purchased their first ship! Let’s outfit your hunk of junk with a weapon. (*buy blaster)")
-                                    counter += 1
                             elif vals[0] == "blaster":
                                 if players.weapon[player] == 1:
                                     await msg.channel.send(",\nYou already purchased the blaster.")
@@ -84,7 +114,6 @@ async def on_message(msg): # executes every message the bot can see
                                     players.weapon[player] = 1
                                     players.credits[player] -= 500
                                     await msg.channel.send(f",\n**{msg.author.display_name}** has mounted their first weapon on their ship! Before takeoff, we’ll buy some hull repair kits. (*buy repairbox)")
-                                    counter += 1
                             elif vals[0] == "repairbox":
                                 if players.state[player] != 0:
                                     await msg.channel.send(",\nYou cannot purchase this kit after tutorial.")
@@ -96,7 +125,6 @@ async def on_message(msg): # executes every message the bot can see
                                     players.inventory[player] = "300"
                                     players.credits[player] -= 750
                                     await msg.channel.send(f",\n**{msg.author.display_name}** is now ready for their first flight! Let’s double check our systems before we launch. (*inventory)")
-                                    counter += 1
                         elif int(players.state[player]) != 4:
                             await msg.channel.send(",\nThis command can only be used when in shop.")
                         elif msg.channel.name != "docked":
@@ -111,14 +139,12 @@ async def on_message(msg): # executes every message the bot can see
                                     players.ship[player] += 1
                                     players.hp[player] = int(getmaxhp(players.ship[player]))
                                     await msg.channel.send(",\nTobias: \"Big purchase! You won't regret it. Thank you.\"")
-                                    counter += 1
                             elif players.state[player] == 4.4:
                                 if players.credits[player] < 100000:
                                     await msg.channel.send(",\nYou don't have enough credits to purchase this item.")
                                 else:
                                     players.credits[player] -= 100000
                                     await msg.channel.send(",\nTobias: \"You have funded our research for many, many more years. Our engineers and I thank you. Take care of it.\"")
-                                    counter += 1
                             elif int(players.state[player] * 10) == 43 and players.state[player] * 10 != 43.0:
                                 if str(players.state[player])[3] == '1':
                                     if players.credits[player] < 250:
@@ -129,7 +155,6 @@ async def on_message(msg): # executes every message the bot can see
                                         players.credits[player] -= 250
                                         players.inventory[player] = str(int(players.inventory[player]) + 100)
                                         await msg.channel.send(",\nYou have purchased **Quick Hull Weld**.")
-                                        counter += 1
                                 if str(players.state[player])[3] == '2':
                                     if players.credits[player] < 300:
                                         await msg.channel.send(",\nYou don't have enough credits to purchase this item.")
@@ -139,7 +164,6 @@ async def on_message(msg): # executes every message the bot can see
                                         players.credits[player] -= 300
                                         players.inventory[player] = str(int(players.inventory[player]) + 10)
                                         await msg.channel.send(",\nYou have purchased **Medium Repair Bot**.")
-                                        counter += 1
                                 if str(players.state[player])[3] == '3':
                                     if players.credits[player] < 450:
                                         await msg.channel.send(",\nYou don't have enough credits to purchase this item.")
@@ -149,7 +173,6 @@ async def on_message(msg): # executes every message the bot can see
                                         players.credits[player] -= 450
                                         players.inventory[player] = str(int(players.inventory[player]) + 1)
                                         await msg.channel.send(",\nYou have purchased **Nanobot Repair Unit**.")
-                                        counter += 1
                             elif int(players.state[player] * 10) == 42 and players.state[player] * 10 != 42.0:
                                 if int(getweaponcost(int(str(players.state[player])[3]))) > players.credits[player]:
                                     await msg.channel.send(",\nYou don't have enough credits to purchase this item.")
@@ -157,7 +180,6 @@ async def on_message(msg): # executes every message the bot can see
                                     players.credits[player] -= int(getweaponcost(int(str(players.state[player])[3])))
                                     players.weapon[player] = int(str(players.state[player])[3])
                                     await msg.channel.send(",\nTobias: \"Thank you. My robots will replace your weapon momentarily.\"")
-                                    counter += 1
                     elif command == "inventory":
                         if players.state[player] != 0:
                             await msg.channel.send(",\nYou can only use this command during the tutorial.")
@@ -187,7 +209,6 @@ Inventory:
                             await msg.channel.send(",\nWithout any repair tools, you won't last much. Get some Quick Hull Welds. (*buy repairbox)")
                         else:
                             players.state[player] = 1
-                            counter += 1
                             await msg.channel.send(f",\n**{msg.author.display_name}** has their first flight! Welcome to **Kusari Star System**. Use (*help) from your ship’s dashboard to see what you can do!")
                     elif command == "help":
                         if players.state[player] == 1:
@@ -288,7 +309,6 @@ Inventory:
                                         players.inventory[player] = "000"
                                         await msg.channel.send(",\nYou are dead,\nAll consumables are lost,\nType *respawn to spawn back at base.")
                                         endoffight(fights.id.index(player))
-                        counter += 1
                     elif command == "attack":
                         if players.state[player] != 2:
                             await msg.channel.send(",\nYou can only attack when in a fight.")
@@ -338,7 +358,6 @@ Inventory:
                                             else:
                                                 await msg.channel.send(",\nYou found a Nanobot Repair Unit but could not take it with you because of full inventory.")
                                     endoffight(index)
-                                    counter += 1
                                     return
                             else:
                                 await msg.channel.send(",\nYour weapons overshot and missed your target! No damage was dealt.")
@@ -346,7 +365,6 @@ Inventory:
                             players.hp[player] -= dmg
                             if dmg != 0:
                                 await msg.channel.send(f",\n**{getenemyship(fights.enemyship[fights.id.index(player)])}** comes around for an attack and deals **{dmg}** dmg to you!")
-                                counter += 1
                             else:
                                 await msg.channel.send(f",\n**{getenemyship(fights.enemyship[fights.id.index(player)])}**'s weapons bounce off your shield, leaving you unharmed this turn!")
                             if players.hp[player] <= 0:
@@ -354,7 +372,6 @@ Inventory:
                                 players.inventory[player] = "000"
                                 await msg.channel.send(",\nYou are dead,\nAll consumables are lost,\nType *respawn to spawn back at base.")
                                 endoffight(index)
-                                counter += 1
                     elif command == "scan":
                         if players.state[player] != 2:
                             await msg.channel.send(",\nYou can only use repair systems when in a fight.")
@@ -396,7 +413,6 @@ Damage: **?5?-?5?**""")
                                     await msg.channel.send(",\nYou are dead,\nAll consumables are lost,\nType *respawn to spawn back at base.")
                                     endoffight(fights.id.index(player))
                                     return
-                                counter += 1
                             else:
                                 await msg.channel.send(f"**{getenemyship(fights.enemyship[fights.id.index(player)])}**'s weapons bounce off your shield, leaving you unharmed this turn!")
                     elif command == "dock":
@@ -407,7 +423,6 @@ Damage: **?5?-?5?**""")
                         else:
                             players.state[player] = 3
                             await msg.channel.send(f",\n**{msg.author.display_name}** has returned to their base. They eat some food, maybe sleep a little,\n\\*launch, \\*repair, \\*shop and \\*check is available in #docked")
-                        counter += 1
                     elif command == "launch":
                         if players.state[player] != 3:
                             await msg.channel.send(",\nThis command can only be used when docked.")
@@ -416,7 +431,6 @@ Damage: **?5?-?5?**""")
                         else:
                             players.state[player] = 1
                             await msg.channel.send(f",\n**{msg.author.display_name}** has launched into space!\n\\*explore, \\*check and \\*dock are available in #in-space")
-                        counter += 1
                     elif command == "repair":
                         if players.state[player] != 3:
                             await msg.channel.send(",\nThis command can only be used when docked.")
@@ -433,7 +447,6 @@ Damage: **?5?-?5?**""")
                                 players.credits[player] -= math.ceil((float(getmaxhp(players.ship[player])) - players.hp[player]) / 10.0) * 2
                                 await msg.channel.send(f",\nYour ship's hull integrity has now been restored to maximum! You now have **{players.credits[player]}** credits.")
                                 players.hp[player] = int(getmaxhp(players.ship[player]))
-                            counter += 1
                     elif command == "shop":
                         if players.state[player] != 3 and int(players.state[player]) != 4:
                             await msg.channel.send(",\nThis command can only be used when docked.")
@@ -451,7 +464,6 @@ Damage: **?5?-?5?**""")
                             players.state[player] = 3
                             players.hp[player] = int(getmaxhp(players.ship[player]))
                             await msg.channel.send(",\nYou returned to your base.")
-                        counter += 1
                     elif command == "upgrades":
                         if int(players.state[player]) != 4:
                             await msg.channel.send(",\nThis command can only be used when in shop.")
@@ -567,9 +579,6 @@ Use *(number) to learn more or *back to view upgrades and bots.""")
 2 **Medium Repair Bot**
 3 **Nanobot Repair Unit**
 Use *(number) to learn more or *back to view upgrades and weapons.""")
-        if counter == 10:
-            counter = 0
-            updatefile()
     return
 
 
@@ -610,18 +619,6 @@ def addplayer(pid):
 def writeplayer(): # adds player to the list.
     f = open("players.txt", "a") # (a stands for append)
     f.write(str(players.id[-1]) + " 0 2750 0 1 -1 000")
-    f.close()
-    return
-
-
-def updatefile():
-    i = 0
-    s = ""
-    while i < len(players.id):
-        s += str(players.id[i]) + ' ' + str(players.state[i]) + ' ' + str(players.credits[i]) + ' ' + str(players.ship[i]) + ' ' + str(players.hp[i]) + ' ' + str(players.weapon[i]) + ' ' + players.inventory[i] + '\n'
-        i += 1
-    f = open("players.txt", "w")
-    f.write(s)
     f.close()
     return
 
